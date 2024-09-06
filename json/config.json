@@ -1,0 +1,39 @@
+{
+    "tokenLimit": 336,
+    "messageCacheLimit": 200000,
+    "prefix": "",
+    "personality": "",
+    "name": "",
+    "username": "",
+    "id": "",
+    "ownerID": "",
+    "slangIt": true,
+    "randomNum": 100,
+    "messageHistoryLength": 15,
+    "slurBlackList" : [
+    ],
+    "spamTimer": 10,
+    "spamLimit": 4,
+    "longMessageLimit": 400,
+    "logToChannel": false,
+    "logChannel": "",
+    "imageCacheDir": "",
+    "soleServer": false,
+    "soleServerID": "",
+    "_currentServer": "",
+    "_testServerID": "",
+    "devList": [
+    ],
+    "superUsers": [
+    ],
+    "modPerms": [
+    ],
+    "userBlacklist": [
+    ],
+    "blacklistResMsg": [
+        "#blacklistmessage"
+    ],
+    "afkResMsg": [
+        "#afkmessage"
+    ] 
+}

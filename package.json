@@ -1,0 +1,22 @@
+{
+  "name": "barry-bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "tsc && cross-env NODE_OPTIONS=--experimental-vm-modules NODE_NO_WARNINGS=1 jest"
+  },
+  "author": "fritz.",
+  "license": "MIT",
+  "dependencies": {
+    "@ffprobe-installer/ffprobe": "^2.1.2",
+    "axios": "^1.7.2",
+    "better-sqlite3": "^11.0.0",
+    "discord.js-selfbot-v13": "^3.1.4",
+    "dotenv": "^16.3.1",
+    "node-ffprobe": "^3.0.0",
+    "openai": "^4.24.0",
+    "quick.db": "^9.1.7"
+  },
+  "type": "module"
+}
