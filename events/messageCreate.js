@@ -14,6 +14,7 @@ import ffProbeInstaller from "@ffprobe-installer/ffprobe"
 probe.FFPROBE_PATH = ffProbeInstaller.path
 
 export default class {
+    //local variable initialization
     constructor(client) {
         this.client = client;
         this.queue = false;
@@ -41,6 +42,7 @@ export default class {
             //check if debug
             if (this.client.debug && !consts.devList.includes(msg.author.id)) return;
 
+            //random num generator for random messages with prompting
             let randomgen = Math.floor(Math.random() * (consts.randomNum - 1)) + 1;
             let checkRandom = (randomgen == 1) && msg.author.username != consts.username && msg.channel.type != "DM" && msg.channel.type != "GROUP_DM"
             let includesBarry = msg.content.toLowerCase().includes(consts.name.toLowerCase()) || msg.content.toLowerCase().includes(consts.username.toLowerCase()) || msg.content.includes(consts.id) || msg.content.includes(`<@${consts.id}>`)
@@ -181,14 +183,17 @@ export default class {
                 log(`  [AI] ${consts.name}: ${msg2send[0]}`, true)
             }
         } catch (e) {
+            //handle if error from rejected message (chat filter)
             if (e.message == "Missing Access" || e.message == "Missing Permissions") return log(`  [AI] Unable to access channel (${msg.guild.name}.${msg.channel.name}), ${e.message}.`, true);
             else if (e.message.includes("content is blocked")) {
+                //blacklist guild from barry sending slurs
                 this.client.slurBlacklist.push(msg.guild.id)
                 msg.reply(msg2sendHolder);
             }
             else throw e
         }
     }
+    //used in messageUpdate.js to update message stored locally in case of a user editing their message
     async checkUpdate(msg) {
         if (msg == null || msg == undefined) return;
         if (msg.author == null || msg.author == undefined) return;
@@ -214,6 +219,7 @@ let handleVM = async (msg, msg2send, client) => {
         input: msg2send[0]
     })
 
+    //calculate cost of voice generation
     let usage = msg2send[0].length
     let rate = 15 / 1000000
     client.cost.total += (usage * rate)
@@ -232,8 +238,10 @@ let handleVM = async (msg, msg2send, client) => {
         let probeJson = await probe(path)
         let reply = (msg.channel.type == "GROUP_DM" || msg.channel.type == "DM") ? null : msg
 
+        //url to post vm to
         const url = "https://discord.com/api/v9/channels/" + msg.channel.id + "/messages"
 
+        //axios body
         const body = {
             flags: 8192,
             channel_id: msg.channel.id,
@@ -249,6 +257,8 @@ let handleVM = async (msg, msg2send, client) => {
                 duration_secs: probeJson.format.duration
             }],
         }
+
+        //axios headers
         const headers = {
             "Content-Type": "application/json",
             "Authorization": client.token,
@@ -289,6 +299,8 @@ async function handleImage(msg) {
     if (msg == null || msg == undefined) return null;
     let imageUrlRegexHolder = /^(?:(?<scheme>[^:\/?#]+):)?(?:\/\/(?<authority>[^\/?#]*))?(?<path>[^?#]*\/)?(?<file>[^?#]*\.(?<extension>[Jj][Pp][Ee]?[Gg]|[Pp][Nn][Gg]|[Gg][Ii][Ff]))(?:\?(?<query>[^#]*))?(?:#(?<fragment>.*))?$/im;
     let imageUrlRegex = new RegExp(imageUrlRegexHolder);
+    
+    //allow certain types of images
     let supportedTypes = [
         "png",
         "jpeg",
@@ -306,6 +318,8 @@ async function handleImage(msg) {
         imageObj.imageURL = img.url
         imageObj.imageType = img.contentType.split("/")[1].toLowerCase()
     }
+
+    //check for links containing media
     if (imageUrlRegex.test(msg.content) && !imageObj.hasImage) {
         imageUrlRegex = new RegExp(imageUrlRegexHolder);
         let img = imageUrlRegex.exec(msg.content)
