@@ -26,6 +26,7 @@ client.slurBlacklist = consts.slurBlackList
 client.memLogged = false
 client.messageCreateClass = null;
 
+//make sure variables have proper data structure if empty
 client.dbInit = async function () {
   if (db.get("debug") == undefined || db.get("debug") == null) await db.set("debug", false)
   if (db.get("cost") == undefined || db.get("cost") == null) await db.set("cost", { total: 0, log: {} })
@@ -33,7 +34,7 @@ client.dbInit = async function () {
   if (db.get("userMemory") == undefined || db.get("userMemory") == null) await db.set("userMemory", {})
   if (db.get("slurBlacklist") == undefined || db.get("slurBlacklist") == null) await db.set("slurBlacklist", consts.slurBlackList)
 }
-
+//make sure variables exist in DB
 client.setDB = async function () {
   await db.set("debug", client.debug)
   await db.set("cost", client.cost)
@@ -42,7 +43,7 @@ client.setDB = async function () {
   await db.set("userMemory", client.userMemory)
   await db.set("slurBlacklist", client.slurBlacklist)
 }
-
+//exported function to sync local variables and database
 client.getDB = async function () {
   client.debug = await db.get("debug")
   client.cost = await db.get("cost")
@@ -55,9 +56,11 @@ client.getDB = async function () {
 async function init() {
   await client.dbInit()
 
+  //getting file structure >> consts
   const directories = readdirSync(process.cwd() + '/commands/'),
     eventFiles = readdirSync(process.cwd() + "/events/");
 
+  //event handling setup
   eventFiles.forEach(async (file) => {
     const eventName = file.split(".")[0];
     const event = new (await import(`./events/${file}`)).default(client);
@@ -65,11 +68,13 @@ async function init() {
     client.on(eventName, (...args) => event.execute(...args));
   });
 
+  //command handling setup
   directories.filter((cmd) => cmd.split(".").pop() === "js").forEach(async (cmd) => {
     const Command = new (await import(`./commands/${cmd}`)).default(client);
     client.commands[Command.name] = Command
   });
 
+  //finish setup
   await client.getDB()
   if (client.debug) console.log("  [DEBUG] Debug mode is on")
   client.login(process.env.BARRYTOKEN)
@@ -139,5 +144,6 @@ await init()
 
 setInterval(client.checkMemory, 1000 * 60 * 60)
 setInterval(function () {
+  //reminder that debug is on
   if (client.debug) console.log("  [DEBUG] Debug mode is on")
 }, 1000 * 60 * 15)
