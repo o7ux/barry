@@ -1,0 +1,110 @@
+# Node.js Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-debug.log*
+
+# Package Lock Files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.test
+.env.development
+.env.*.local
+
+# Development & Documentation
+todo.md
+TODO.md
+README.local.md
+
+# Audio Files
+*.ogg
+*.mp3
+*.wav
+*.flac
+*.m4a
+
+# Text Files
+*.txt
+*.md.bak
+
+# Log Files
+*.log
+logs/
+log.log
+
+# Database Files
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# Runtime Data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage Directory
+coverage/
+*.lcov
+.nyc_output/
+
+# Cache Directories
+.cache/
+.npm/
+.nvm/
+.eslintcache
+.parcel-cache/
+jest-cache/
+.next/
+.nuxt/
+.svelte-kit/
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+*.orig
+*.rej
+*.kate-swp
+.cursor/
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+Icon?
+*.VolumeIcon.icns
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Build Output
+dist/
+build/
+out/
+public/
+release/
+lib/
+bin/
