@@ -1,8 +1,8 @@
 <div align="center">
 
-# 🤖 BarryBot Development Roadmap
+# 🤖 Barry
 
-### *Advanced Discord AI with Social Intelligence*
+### *A Selfhosted Discord Chatbot*
 
 **Barry** is an advanced Discord chatbot designed to engage users through controversial topics while maintaining natural conversation. This roadmap outlines the transformation from an openAI API 'chatbot wrapper' into an advanced social AI running ollama, with human-like community awareness, persistent memory systems, and LLM tool/vision calls.
 
@@ -11,12 +11,14 @@
 **Focus**: Natural conversation participation
 
 <sub>*Roadmap written by Claude-4-sonnet*</sub>
-
----
-
 </div>
 
-## Feature Keynotes - The Complete Barry Vision
+<div align="center">
+<br>
+
+# Roadmap  
+</div>
+<div>
 
 ### 🧠 Advanced AI & Conversation Intelligence
 - [🔴] **Natural Conversation Participation** - Barry joins conversations organically without mentions
@@ -75,8 +77,8 @@
 
 **Total Feature Count**: 35+ major features across 9 categories  
 **Core Focus**: Transform Barry from basic chatbot into sophisticated social AI with human-like community awareness
+</div>
 
-### Status Legend
-🟢 **Completed** - Feature fully implemented and tested  
-🟡 **In Progress** - Currently being developed or partially implemented  
-🔴 **Not Started** - Feature planned but development not yet begun
+> 🟢 **Completed** - Feature fully implemented and tested  
+> 🟡 **In Progress** - Currently being developed or partially implemented  
+> 🔴 **Not Started** - Feature planned but development not yet begun
