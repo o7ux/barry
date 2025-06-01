@@ -1,51 +1,92 @@
-import { cmdError } from "../classes/errorOverride.js"
-import { exists } from "../functions/util.js"
-
 export default class {
     constructor(client) {
         this.client = client
         this.name = "blacklist"
-        this.type = "dev"
-        this.help = ".b blacklist [add|rem] [userid]"
+        this.help = ".b blacklist <add|remove|list|infractions|reset|help>"
     };
     async execute(msg, args) {
-        let noArgs = new cmdError("Invalid arguments", "Please supply an argument.")
-        if(!exists(args[0]) || !exists(args[1])) throw noArgs;
-        try {
-            let tempy = await this.client.users.fetch(args[0])
-            if(!exists(tempy)){
-                let tempy = await msg.guild.members.fetch(args[0])
-                if(!exists(tempy)) throw new Error("unable to find user in cache")
-            } 
-            var idUser = tempy.username;
-        } catch (e) {
-            var idUser = "unknown_user"
-        }
-        switch(args[0]){
-            case "rem":
-                if(!this.client.blacklist.includes(args[1])) throw new cmdError("User not in blacklist.", "User not in blacklist.")
-                try {
-                    let tempy = new Array(this.client.blacklist)
-                    tempy.forEach(x => {
-                        if(x != args[0].toString()) tempy.push(args[0])
-                    })
-                    if(tempy.length == this.client.blacklist) throw new cmdError("Failed to remove user from blacklist", "Failed to remove user from blacklist");
-                    else { msg.reply(`Successfully removed ${idUser} from blacklist`); this.client.blacklist = tempy }
-                } catch(e) {
-                    throw new cmdError(e.name, e.message)
-                }
-                break;
+        console.log(`[BLACKLIST] ${msg.author.username} (${msg.author.id}) requested blacklist command`)
+        
+        const subcommand = args[0]?.toLowerCase()
+        
+        switch (subcommand) {
             case "add":
-                if(this.client.blacklist.includes(args[1])) throw new cmdError("User already in blacklist.", "User already in blacklist.")
-                try { 
-                    this.client.blacklist.push(args[1]); 
-                    msg.reply(`Successfully added ${idUser} to blacklist.`)
-                } catch(e) { 
-                    throw new cmdError(e.name, e.message)
+                if (!args[1]) return msg.reply("Please specify a user ID to blacklist. Expected format: `.b blacklist add <userID>`")
+                
+                const userToAdd = args[1]
+                const existingUser = this.client.blacklistedUsers.find(user => user.id === userToAdd)
+                
+                if (existingUser) {
+                    existingUser.blacklisted = true
+                    existingUser.infractions = Math.max(existingUser.infractions, 5) // Set infractions to at least 5
+                } else {
+                    this.client.blacklistedUsers.push({
+                        id: userToAdd,
+                        blacklisted: true,
+                        infractions: 5
+                    })
                 }
-                break;
+                
+                await this.client.writeMemory()
+                return msg.reply(`User ${userToAdd} has been blacklisted.`)
+                
+            case "remove":
+                if (!args[1]) return msg.reply("Please specify a user ID to remove from blacklist. Expected format: `.b blacklist remove <userID>`")
+                
+                const userToRemove = args[1]
+                const userIndex = this.client.blacklistedUsers.findIndex(user => user.id === userToRemove)
+                
+                if (userIndex === -1) return msg.reply(`User ${userToRemove} is not in the blacklist.`)
+                
+                this.client.blacklistedUsers[userIndex].blacklisted = false
+                await this.client.writeMemory()
+                return msg.reply(`User ${userToRemove} has been removed from the blacklist.`)
+                
+            case "list":
+                const blacklistedUsers = this.client.blacklistedUsers.filter(user => user.blacklisted)
+                
+                if (blacklistedUsers.length === 0) return msg.reply("No users are currently blacklisted.")
+                
+                const userList = blacklistedUsers.map(user => `${user.id} (Infractions: ${user.infractions})`).join("\n")
+                return msg.reply(`**Blacklisted Users:**\n\`\`\`${userList}\`\`\``)
+                
+            case "infractions":
+                if (!args[1]) return msg.reply("Please specify a user ID to check infractions. Expected format: `.b blacklist infractions <userID>`")
+                
+                const userToCheck = args[1]
+                const user = this.client.blacklistedUsers.find(user => user.id === userToCheck)
+                
+                if (!user) return msg.reply(`User ${userToCheck} has no recorded infractions.`)
+                
+                const blacklistStatus = user.blacklisted ? "blacklisted" : "not blacklisted"
+                return msg.reply(`User ${userToCheck} has ${user.infractions} infractions and is ${blacklistStatus}.`)
+                
+            case "reset":
+                if (!args[1]) return msg.reply("Please specify a user ID to reset infractions. Expected format: `.b blacklist reset <userID>`")
+                
+                const userToReset = args[1]
+                const resetUser = this.client.blacklistedUsers.find(user => user.id === userToReset)
+                
+                if (!resetUser) return msg.reply(`User ${userToReset} has no recorded infractions.`)
+                
+                resetUser.infractions = 0
+                resetUser.blacklisted = false
+                await this.client.writeMemory()
+                return msg.reply(`Infractions for user ${userToReset} have been reset to 0 and user has been removed from blacklist.`)
+                
+            case "help":
+                return msg.reply(
+                    "**Blacklist Command Help:**\n" +
+                    "`.b blacklist add <userID>` - Add a user to the blacklist\n" +
+                    "`.b blacklist remove <userID>` - Remove a user from the blacklist\n" +
+                    "`.b blacklist list` - List all blacklisted users\n" +
+                    "`.b blacklist infractions <userID>` - Check infractions for a user\n" +
+                    "`.b blacklist reset <userID>` - Reset infractions for a user\n" +
+                    "`.b blacklist help` - Show this help message"
+                )
+                
             default:
-                throw noArgs
+                return msg.reply("Invalid subcommand. Use `.b blacklist help` to see available commands.")
         }
     };
-};
+}; 

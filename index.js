@@ -1,149 +1,139 @@
 //imports libs
 import Discord from "discord.js-selfbot-v13"
 import dotenv from "dotenv"
-import { readdirSync } from "fs"
-import { QuickDB } from "quick.db"
+import fs, { readdirSync } from "fs"
+import { JSONFilePreset } from 'lowdb/node'
 
 //import files
-import consts from "./json/config.json" assert {type: "json"}
-import { cmdError } from "./classes/errorOverride.js"
-import { Cost } from "./classes/cost.js"
+import config from "./config/config.json" with {type: "json"}
+import ErrorExtended from "./classes/errorOverride.js"
+import * as utils from "./functions/util.js"
+import commandHandler from "./classes/commandHandler.js"
+import UserMemory from "./classes/userMemory.js"
 
 //setup
-const db = new QuickDB()
 const client = new Discord.Client({
   checkUpdate: false,
 });
+
 dotenv.config()
 
-//client variables
-client.debug = false
-client.commands = {}
-client.cost = { total: 0, log: {} }
-client.blacklist = consts.userBlacklist
-client.userMemory = {}
-client.slurBlacklist = consts.slurBlackList
-client.memLogged = false
-client.messageCreateClass = null;
+//database
 
-//make sure variables have proper data structure if empty
-client.dbInit = async function () {
-  if (db.get("debug") == undefined || db.get("debug") == null) await db.set("debug", false)
-  if (db.get("cost") == undefined || db.get("cost") == null) await db.set("cost", { total: 0, log: {} })
-  if (db.get("blacklist") == undefined || db.get("blacklist") == null) await db.set("blacklist", consts.userBlacklist)
-  if (db.get("userMemory") == undefined || db.get("userMemory") == null) await db.set("userMemory", {})
-  if (db.get("slurBlacklist") == undefined || db.get("slurBlacklist") == null) await db.set("slurBlacklist", consts.slurBlackList)
-}
-//make sure variables exist in DB
-client.setDB = async function () {
-  await db.set("debug", client.debug)
-  await db.set("cost", client.cost)
-  await db.set("messageCache", {})
-  await db.set("blacklist", client.blacklist)
-  await db.set("userMemory", client.userMemory)
-  await db.set("slurBlacklist", client.slurBlacklist)
-}
-//exported function to sync local variables and database
-client.getDB = async function () {
-  client.debug = await db.get("debug")
-  client.cost = await db.get("cost")
-  client.blacklist = await db.get("blacklist")
-  client.userMemory = await db.get("userMemory")
-  client.slurBlacklist = await db.get("slurBlacklist")
+const defaultData = {
+  memory: {},
+  blacklist: [],
+  config: { debug: false }
 }
 
-//event handling
+const db = await JSONFilePreset('./data/db.json', defaultData)
+
+//client variable declarations
+
+client.commands = {};
+
+client.cleanShutdown = async function () {
+  console.log("Shutting down...");
+  await client.writeMemory(); // save memory to db
+  client.destroy();
+  console.log("Shutdown complete. Goodbye!");
+  process.exit(0);
+};
+
+client.toggleDebug = function (bool) {
+  if (typeof (bool) != "boolean") throw new ErrorExtended("Not of type Boolean", "Supplied variable is not of type Boolean.");
+
+  if (bool) client.debug = true;
+  else client.debug = false;
+}
+
 async function init() {
-  await client.dbInit()
 
-  //getting file structure >> consts
-  const directories = readdirSync(process.cwd() + '/commands/'),
+  const commandFiles = readdirSync(process.cwd() + '/commands/'),
     eventFiles = readdirSync(process.cwd() + "/events/");
 
-  //event handling setup
-  eventFiles.forEach(async (file) => {
+  eventFiles.filter((file) => file.split(".").pop() === "js").forEach(async (file) => {
     const eventName = file.split(".")[0];
     const event = new (await import(`./events/${file}`)).default(client);
-    if(eventName == "messageCreate") client.messageCreateClass = event;
+
     client.on(eventName, (...args) => event.execute(...args));
+
+    if (eventName == "messageCreate") client.createClass = event;
   });
 
-  //command handling setup
-  directories.filter((cmd) => cmd.split(".").pop() === "js").forEach(async (cmd) => {
-    const Command = new (await import(`./commands/${cmd}`)).default(client);
+  commandFiles.filter((file) => file.split(".").pop() === "js").forEach(async (file) => {
+    const Command = new (await import(`./commands/${file}`)).default(client);
     client.commands[Command.name] = Command
   });
 
-  //finish setup
-  await client.getDB()
-  if (client.debug) console.log("  [DEBUG] Debug mode is on")
-  client.login(process.env.BARRYTOKEN)
+  client.utils = utils;
+  client.config = config;
+
+  const commandHandlerInstance = new commandHandler(client);
+  client.runCommand = commandHandlerInstance.handleMessage.bind(commandHandlerInstance);
+
+  await initMemory();
+  client.writeMemory = writeMemory.bind(client);
+
+  const isDev = process.argv.includes('--dev')
+  await client.login(isDev ? process.env.DISCORD_TOKEN_DEV : process.env.DISCORD_TOKEN)
+  console.log(`[LOGIN] Running in ${isDev ? "Development" : "Production"} mode`)
 }
 
-//check memory
-client.checkMemory = async function () {
-  let now = new Date()
-  let hour = now.getUTCHours()
-  let minute = now.getUTCMinutes()
+async function initMemory() {
+  const userMemory = new UserMemory(client, db.data.memory);
+  const blacklistedUsers = db.data.blacklist;
 
-  console.log(`  [MEM] ${hour}:${minute == 0 ? "00" : minute} UTC`)
-  let memory = process.memoryUsage().heapUsed / 1024 / 1024
-  console.log(`  [MEM] Memory usage: ${memory.toFixed(0)}MB`)
-  let count = 0
-  Object.keys(client.userMemory).forEach(async (key) => {
-    Object.keys(client.userMemory[key]).forEach(() => {
-      count++
-    })
-  })
-  console.log(`  [MEM] User memory size: ${count}`)
+  client.properties = {
+    debug: db.data.config.debug
+  };
 
-  if (client.memLogged) {
-    let yesterday = new Date(new Date().getTime() - (60 * 60 * 1000)).getTime()
-    let cost = new Cost(client)
-    let costTotal = await cost.getSince(yesterday, client.cost.log)
-    console.log(`  [MEM] Total cost since last MEM check: $${costTotal.toFixed(3)}`)
-  }
-
-  client.memLogged = true
+  client.userMemory = userMemory;
+  client.blacklistedUsers = blacklistedUsers;
 }
 
-//toggle debug
-function toggleDebug(bool) {
-  if (typeof (bool) != "boolean") throw new cmdError("Not of type Boolean", "Supplied variable is not of type Boolean.");
-  if (bool) client.debug = true; else client.debug = false;
+async function writeMemory() {
+  db.data.memory = client.userMemory.memory;
+  db.data.blacklist = client.blacklistedUsers;
+  db.data.config.debug = client.properties.debug;
+  await db.write();
 }
 
 //catch exception to avoid crashing
 process.on('uncaughtException', async function (err) {
   try {
-    console.error(`  [ERROR] ${err.message}`);
-    console.error(`  [ERROR] Stack Trace:\n    ${err.stack}`);
-    let loggingChannel = await client.channels.fetch(consts.logChannel)
-    await loggingChannel.send(`<@${consts.ownerID}>\n**[ERROR] ${err.message}**`)
-    await loggingChannel.send(`**[ERROR] Stack Trace:**\n    ${err.stack}`)
+    console.error(`Handled exception: ${err.stack}`);
+    await client.writeMemory();
   } catch (e) {
-    console.log(`  [ERROR] CRITICAL ERROR, CANNOT BE LOGGED`)
-    await client.setDB()
+    console.error(`Unable to handle exception: ${e.message}`);
+    process.exit(1);
   }
-})
+});
 
-//save memory to db on exit
-process.on(`exit`, async () => {
-  await client.setDB()
-})
+process.on('unhandledRejection', async (reason) => {
+  try {
+    console.error(`Unhandled rejection: ${reason}`);
+    await client.writeMemory();
+  } catch (e) {
+    console.error(`Unable to handle rejection: ${e.message}`);
+    process.exit(1);
+  }
+});
 
-//sigint handler
+//save memory on shutdown
 process.on('SIGINT', async () => {
-  await client.setDB()
-  process.exit()
-})
+  console.log("\nSIGINT received.");
+  await client.writeMemory();
+  process.exit(0);
+});
 
-export { client, toggleDebug, Discord, db}
+process.on('SIGTERM', async () => {
+  console.log("SIGTERM received.");
+  await client.writeMemory();
+  process.exit(0);
+});
 
-await init()
 
-setInterval(client.checkMemory, 1000 * 60 * 60)
-setInterval(function () {
-  //reminder that debug is on
-  if (client.debug) console.log("  [DEBUG] Debug mode is on")
-}, 1000 * 60 * 15)
+export default client;
+
+await init();

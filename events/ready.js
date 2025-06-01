@@ -1,16 +1,13 @@
-import {log} from "../functions/util.js"
-import consts from "../json/config.json" assert {type: "json"}
-
 export default class {
     constructor(client) {
         this.client = client;
     }
     async execute() {
-        this.client.user.setStatus("idle")
-        this.client.user.setActivity("as a human", {
+        this.client.user.setStatus("away")
+        this.client.user.setActivity("with my balls", {
             type: "PLAYING"
         })
-        log(`  [AI] ${consts.name} Initiated\n`, true)
-        this.client.checkMemory()
+        this.client.utils.log(`[LOGIN] Logged into Discord as ${this.client.user.username}`, true)
     }
+
 }

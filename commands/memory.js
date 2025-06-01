@@ -1,42 +1,70 @@
-import util from 'util'
-import { chunkSubstr } from "../functions/util.js"
-import { wipeMemory } from "../functions/memory.js"
-import { lastMsgBKG } from "../functions/openAI.js"
-import { cmdError } from '../classes/errorOverride.js'
-
 export default class {
     constructor(client) {
         this.client = client
         this.name = "memory"
-        this.type = "superUser"
-        this.help = ".b memory [wipe|dump|recent]"
+        this.help = ".b memory <clear|wipe|list|stats|help>"
     };
     async execute(msg, args) {
-        let noArgs = new cmdError("Invalid arguments", "Please supply an argument. [wipe|dump|recent]")
-        if (args[0] == undefined) throw noArgs
-        if (args[0].toLowerCase() != "dump" && args[0].toLowerCase() != "wipe" && args[0].toLowerCase() != "recent") throw noArgs
+        console.log(`[MEMORY] ${msg.author.username} (${msg.author.id}) requested memory`)
+        
+        const subcommand = args[0]?.toLowerCase()
+        
+        switch (subcommand) {
+            case "clear":
+                if(!args[1]) return msg.reply("Please specify a user to clear memory for. Expected format: `.b memory clear <userID>`")
 
-        if (args[0] == "dump") {
-            let messagesArray = chunkSubstr(util.inspect(this.client.userMemory, { depth: null }), 1800)
-            if(messagesArray.length >= 3) await msg.reply("Memory dump is too large.")
-            console.log(util.inspect(this.client.userMemory, { depth: null, color: true }))
-            messagesArray.forEach(async x => {
-                await msg.reply("```" + x + `\nDEBUG = ${this.client.debug}` + "```")
-            }, this)
-        } else if (args[0] == "wipe") {
-            if(args[1]){
-                if(this.client.userMemory.hasOwnProperty(args[1])){
-                    this.client.userMemory[args[1]] = {}
-                    await msg.reply(`Successfully wiped memory for ${args[1]}`)
-                } else {
-                    await msg.reply(`No memory found for ${args[1]}`)
+                if(!this.client.userMemory.memory[args[1]]) return msg.reply("User not found in memory. Expected format: `.b memory clear <userID>`")
+
+                await this.client.userMemory.clearMemory(args[1])
+                await this.client.writeMemory()
+                return msg.reply(`Memory cleared for user ${args[1]}.`)
+                
+            case "wipe":
+                await this.client.userMemory.clearAllMemory()
+                await this.client.writeMemory()
+                return msg.reply("All memory wiped.")
+                
+            case "stats":
+                if(!args[1]) return msg.reply("Please specify a user to show stats for. Expected format: `.b memory stats <userID|all>`")
+                
+                if(args[1] === "all"){
+                    let allMemory = this.client.userMemory.memory
+                    let statsText = []
+                    
+                    for(const userId in allMemory) {
+                        const stats = await this.client.userMemory.getMemoryStats(userId)
+                        statsText.push(`${userId}: ${stats.totalMessages} total (${stats.userMessages} user, ${stats.assistantMessages} assistant)`)
+                    }
+                    
+                    return msg.reply(`**Memory Stats:**\n\`\`\`${statsText.join("\n")}\`\`\``)
                 }
-            } else {
-                wipeMemory()
-                await msg.reply("```" + util.inspect(this.client.userMemory, { depth: null }) + `\nDEBUG = ${this.client.debug}` + "```")
-            }
-        } else if (args[0] == "recent") {
-            await msg.reply("```" + util.inspect(lastMsgBKG, { depth: null }) + "```")
+                
+                if(!this.client.userMemory.memory[args[1]]) return msg.reply("User not found in memory.")
+                
+                const stats = await this.client.userMemory.getMemoryStats(args[1])
+                const firstTimestamp = stats.firstMessage ? new Date(stats.firstMessage.timestamp).toLocaleString() : "N/A"
+                const lastTimestamp = stats.lastMessage ? new Date(stats.lastMessage.timestamp).toLocaleString() : "N/A"
+                
+                return msg.reply(
+                    `**Memory Stats for ${args[1]}:**\n\`\`\`` +
+                    `Total Messages: ${stats.totalMessages}\n` +
+                    `User Messages: ${stats.userMessages}\n` +
+                    `Assistant Messages: ${stats.assistantMessages}\n` +
+                    `First Message: ${firstTimestamp}\n` +
+                    `Last Message: ${lastTimestamp}\`\`\``
+                )
+                
+            case "help":
+                return msg.reply(
+                    "**Memory Command Help:**\n" +
+                    "`.b memory clear <userID>` - Clear memory for a specific user\n" +
+                    "`.b memory wipe` - Wipe all memory\n" +
+                    "`.b memory stats <userID|all>` - Show memory statistics\n" +
+                    "`.b memory help` - Show this help message"
+                )
+                
+            default:    
+                return msg.reply("Invalid subcommand. Use `.b memory help` to see available commands.")
         }
     };
 };

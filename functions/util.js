@@ -1,12 +1,7 @@
-import consts from "../json/config.json" assert {type: "json"}
-import { client } from "../index.js";
+import fetch from "node-fetch"
 
 async function log(message, send) {
   console.log(message)
-  if (send && consts.logToChannel) {
-    let loggingChannel = await client.channels.fetch(consts.logChannel)
-    await loggingChannel.send(message.substring(7))
-  }
   return;
 }
 
@@ -36,4 +31,19 @@ function sanitize(string, regex) {
   return santized;
 }
 
-export { log, wait, chunkSubstr, exists, sanitize }
+function insertBeforeLast(array, item) {
+  return [...array.slice(0, array.length - 1), item, array[array.length - 1]]
+}
+
+async function fetchBase64fromURL(url) {
+  try {
+    const res = await fetch(url);
+    const buffer = await res.buffer();
+    return buffer.toString('base64');
+  } catch (error) {
+    console.error(`Error fetching base64 from URL: ${error}`);
+    return null;
+  }
+}
+
+export { log, wait, chunkSubstr, exists, sanitize, insertBeforeLast, fetchBase64fromURL }

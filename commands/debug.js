@@ -1,20 +1,31 @@
-import { toggleDebug } from "../index.js"
-import { chat } from "../functions/openAI.js"
-import { cmdError } from "../classes/errorOverride.js"
-
 export default class {
     constructor(client) {
         this.client = client
         this.name = "debug"
-        this.type = "superUser"
-        this.help = ".b debug [true|false]"
+        this.help = ".b debug <on|off|status>"
     };
     async execute(msg, args) {
-        let noArgs = new cmdError("Invalid Arguments", "Please supply an argument. [True/False]")
-        if (args[0] == undefined) throw noArgs;
-        if (args[0].toLowerCase() != "true" && args[0].toLowerCase() != "false") throw noArgs;
-        try { toggleDebug(args[0] == "true" ? true : false) } catch (e) { throw new cmdError(e.name, e.message) }
-        let msg2send = await chat('Hello!', [""], [""], msg)
-        msg.reply(`${msg2send[0]}\n\n ${this.client.debug}`)
+        console.log(`[DEBUG] ${msg.author.username} (${msg.author.id}) requested debug command`)
+        
+        const subcommand = args[0]?.toLowerCase()
+        
+        switch (subcommand) {
+            case "on":
+                this.client.properties.debug = true
+                await this.client.writeMemory()
+                return msg.reply("Debug mode enabled.")
+                
+            case "off":
+                this.client.properties.debug = false
+                await this.client.writeMemory()
+                return msg.reply("Debug mode disabled.")
+                
+            case "status":
+                const status = this.client.properties.debug ? "enabled" : "disabled"
+                return msg.reply(`Debug mode is currently ${status}.`)
+                
+            default:
+                return msg.reply("Invalid subcommand. Use `.b debug on`, `.b debug off`, or `.b debug status`.")
+        }
     };
-};
+}; 
