@@ -53,7 +53,7 @@
 
 ### 🔧 Technical Infrastructure
 - [🔴] **Anti-Spam & Moderation** - Enhanced detection with server blacklist integration
-- [🔴] **Error Handling Improvements** - Graceful degradation instead of crashes, auto-blacklisting on repeated failures
+- [🟡] **Error Handling Improvements** - Graceful degradation instead of crashes, auto-blacklisting on repeated failures
 - [🟢] **OpenAI Migration** - Complete transition to Ollama/local models for independence
 - [🟢] **Code Cleanup & Optimization** - Redundant code removal, message buffer improvements, performance tuning
 
