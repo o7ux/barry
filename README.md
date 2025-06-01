@@ -6,7 +6,7 @@
 
 **Barry** is an advanced Discord chatbot designed to engage users through controversial topics while maintaining natural conversation. This roadmap outlines the transformation from an openAI API 'chatbot wrapper' into an advanced social AI running ollama, with human-like community awareness, persistent memory systems, and LLM tool/vision calls.
 
-**Current Status**: Early development with OpenAI integration  
+**Current Status**: Ollama integration complete with image recognition and OCR capabilities.
 **Target**: Fully autonomous social AI with local interference  
 **Focus**: Natural conversation participation
 
