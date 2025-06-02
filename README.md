@@ -10,13 +10,15 @@
 **Target**: Fully autonomous social AI with local interference  
 **Focus**: Natural conversation participation
 
-<sub>*Roadmap written by Claude-4-sonnet*</sub>
-</div>
+![Last Commit](https://img.shields.io/github/last-commit/o7ux/barry?style=flat) ![JavaScript](https://img.shields.io/badge/javascript-100%25-blue?logo=javascript)  
+![Ollama](https://img.shields.io/badge/Ollama-black) ![Discord](https://img.shields.io/badge/Discord-blue?logo=discord&logoColor=white) ![npm](https://img.shields.io/badge/npm-red?logo=npm&logoColor=white)  
 
+<sub>*Roadmap written by Claude-4-sonnet*</sub>  
+</div>
 <div align="center">
 <br>
 
-# Roadmap  
+# Roadmap
 </div>
 <div>
 
