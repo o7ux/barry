@@ -1,22 +1,34 @@
 ### user memory schema
+
 ```javascript
-memory = {
-    userID : [
-        {
-            key: "user",
-            value: "Hello, how are you?",
-            timestamp: 1717171717171
-        },
-        {
-            key: "assistant",
-            value: "I'm fine, thank you!",
-            timestamp: 1717171717171
-        }
-    ]
-}
+userMemory = {
+  userID: {
+    lastMessage: 171717171717
+    messages: [
+      {
+        key: "user",
+        value: "Hello, how are you?",
+        timestamp: 1717171717171,
+      },
+      {
+        key: "assistant",
+        value: "I'm fine, thank you!",
+        timestamp: 1717171717171,
+      },
+    ],
+    conversation_summary: {
+        first_message: 171717171717,
+        topic_interests: [
+            "money",
+            "technology"
+        ]
+    }
+  },
+};
 ```
 
 ### blacklisted users schema
+
 ```javascript
 blacklisted = [
     {
@@ -30,3 +42,4 @@ blacklisted = [
         infractions: 5
     }
 ]
+```

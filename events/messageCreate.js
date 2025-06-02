@@ -6,16 +6,13 @@ export default class {
         this.queue = { running: false, messages: [] }
     }
     async execute(message) {
-        if(message.content.startsWith(this.client.config.prefix)){
-            let cont = await this.client.runCommand(message)
-            console.log(cont)
-            if(cont) return;
-        }
+        if(message.content.startsWith(this.client.config.prefix)) if(await this.client.runCommand(message)) return;
 
         if(this.client.properties.debug && !this.client.config.superUsers.includes(message.author.id)) return;
         if(!await this.shouldReply(message)) return;
 
         console.log(`[QUEUE] Execute called for user ${message.author.username} (${message.author.id})`);
+        console.log(`[QUEUE] Execute called in ${message.channel && message.guild ? `${message.guild.name} | ${message.channel.name}` : "DM"}`);
         
         const existingEntry = this.queue.messages.find(m => m.author == message.author.id);
         if (existingEntry) {

@@ -1,24 +1,60 @@
 import client from "../index.js"
 import ollama from "ollama"
 
-export default async function preprocess(message) {
+async function preprocess(message, returnBase64 = false) {
+    let images = [];
 
-    //check if the message has an attachment
-    if (!message.attachments.first()) return null;
+    // handle direct attachments
+    if(message.attachments.size > 0) {
+        const attachmentImages = await Promise.all(
+            [...message.attachments.values()]
+                .filter(attachment => attachment.contentType && 
+                    supportedTypes.includes(attachment.contentType.split("/")[1].toLowerCase()))
+                .map(async (attachment) => {
+                    return await client.utils.fetchBase64fromURL(attachment.url);
+                })
+        );
+        images = [...images, ...attachmentImages];
+    }
 
-    //check if the attachment is an image
-    if (!supportedTypes.includes(message.attachments.first().contentType.split("/")[1].toLowerCase())) return null;
+    // jandle URLs in message content
+    if(message.content) {
+        const foundUrls = [];
+        
+        for(const pattern of supportedURLs) {
+            const regex = new RegExp(pattern, 'g');
+            const matches = [...message.content.matchAll(regex)];
+            
+            matches.forEach(match => {
+                foundUrls.push(match[0]);
+            });
+        }
+        
+        if(foundUrls.length > 0) {
+            const uniqueUrls = Array.from(new Set(foundUrls));
+            const cleanedUrls = uniqueUrls.map(url => url.replace(/[)\]\.,!]+$/, ''));
+            
+            console.log(`[PREPROCESS] Found ${foundUrls.length} URLs, ${cleanedUrls.length} unique`);
+            
+            const urlImages = await Promise.all(
+                cleanedUrls.map(async (url) => {
+                    return await client.utils.fetchBase64fromURL(url);
+                })
+            );
+            images = [...images, ...urlImages];
+        }
+    }
 
-    let images = await Promise.all(
-        [...message.attachments.values()].map(async (attachment) => {
-            return await client.utils.fetchBase64fromURL(attachment.url);
-        })
-    );
+    // filter out null results
+    images = images.filter(image => image !== null);
+    if(images.length === 0) return null;
 
-    images = images.filter(image => image !== null)
-    if (images.length == 0) return null;
+    //set cap
+    if(images.length > 4) images = images.slice(0, 4);
 
-    console.log(`[PREPROCESS] Got ${images.length} images`)
+    console.log(`[PREPROCESS] Got ${images.length} images`);
+
+    if(returnBase64) return images;
 
     const response = await ollama.chat({
         model: 'granite3.2-vision',
@@ -44,8 +80,7 @@ export default async function preprocess(message) {
         num_ctx: 256
     });
 
-    return response.message.content
-
+    return response.message.content.length == 0 ? "No visual content found." : response.message.content;
 }
 
 const supportedTypes = [
@@ -55,5 +90,49 @@ const supportedTypes = [
     "gif",
     "webp"
 ]
+
+const supportedURLs = [
+    "https?:\\/\\/(?:www\\.)?tenor\\.com\\/view\\/[a-zA-Z0-9\\-]+-(\\d+)",
+    "https?:\\/\\/(?:media|cdn)\\.discordapp\\.(?:net|com)\\/attachments\\/\\d+\\/\\d+\\/[^\\s]+?\\.(?:png|jpeg|jpg|gif|webp)(?:\\?[^\\s]*)?",
+    "https?:\/\/media\.giphy\.com\/media\/[a-zA-Z0-9]+\/giphy\.(?:gif|webp)",
+    "https?:\/\/i\.imgur\.com\/[a-zA-Z0-9]+\.(?:png|jpeg|jpg|gif|webp)",
+    "https?:\/\/i\.gyazo\.com\/[a-f0-9]{32}\.(?:png|jpeg|jpg|gif|webp)",
+    "https?:\\/\\/preview\\.redd\\.it\\/[a-zA-Z0-9]+\\.(?:png|jpeg|jpg|gif|webp)(?:\\?[^\\s]*)?",
+    "https?:\/\/i\.redd\.it\/[a-zA-Z0-9]+\.(?:png|jpeg|jpg|gif|webp)",
+    "https?:\/\/pbs\.twimg\.com\/media\/[a-zA-Z0-9_-]+\.(?:png|jpeg|jpg|gif|webp)",
+    "https?:\/\/files\.catbox\.moe\/[a-zA-Z0-9]+\.(?:png|jpeg|jpg|gif|webp)",
+    "https?:\/\/fruz\.cc\/u\/[a-zA-Z0-9]+\.(?:png|jpeg|jpg|gif|webp)"
+];
+
+
+async function checkForImages(message) {
+    // Check for direct attachments
+    if (message.attachments.size > 0) {
+        // Check each attachment for valid image type
+        const validAttachments = [...message.attachments.values()].filter(attachment => 
+            attachment && 
+            attachment.contentType && 
+            supportedTypes.includes(attachment.contentType.split("/")[1].toLowerCase())
+        );
+        
+        if (validAttachments.length > 0) {
+            return true;
+        }
+    }
+    
+    // Check message content for URLs matching any of the supported patterns
+    if (message.content) {
+        for (const pattern of supportedURLs) {
+            const regex = new RegExp(pattern, 'g');
+            if (regex.test(message.content)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+export { preprocess, checkForImages }
 
 //images <Uint8Array[] | string[]>: (Optional) Images to be included in the message, either as Uint8Array or base64 encoded strings.

@@ -18,6 +18,8 @@ const client = new Discord.Client({
 
 dotenv.config()
 
+const isDev = process.argv.includes('--dev')
+
 //database
 
 const defaultData = {
@@ -26,7 +28,7 @@ const defaultData = {
   config: { debug: false }
 }
 
-const db = await JSONFilePreset('./data/db.json', defaultData)
+const db = await JSONFilePreset(isDev ? './data/db-dev.json' : './data/db.json', defaultData)
 
 //client variable declarations
 
@@ -58,7 +60,10 @@ async function init() {
 
     client.on(eventName, (...args) => event.execute(...args));
 
-    if (eventName == "messageCreate") client.createClass = event;
+    if (eventName == "messageCreate") {
+      client.createClass = event;
+      console.log(`[INIT] MessageCreate event initialized.`)
+    }
   });
 
   commandFiles.filter((file) => file.split(".").pop() === "js").forEach(async (file) => {
@@ -68,6 +73,7 @@ async function init() {
 
   client.utils = utils;
   client.config = config;
+  client.isDev = isDev;
 
   const commandHandlerInstance = new commandHandler(client);
   client.runCommand = commandHandlerInstance.handleMessage.bind(commandHandlerInstance);
@@ -75,7 +81,6 @@ async function init() {
   await initMemory();
   client.writeMemory = writeMemory.bind(client);
 
-  const isDev = process.argv.includes('--dev')
   await client.login(isDev ? process.env.DISCORD_TOKEN_DEV : process.env.DISCORD_TOKEN)
   console.log(`[LOGIN] Running in ${isDev ? "Development" : "Production"} mode`)
 }
@@ -90,6 +95,8 @@ async function initMemory() {
 
   client.userMemory = userMemory;
   client.blacklistedUsers = blacklistedUsers;
+
+  console.log(`[INIT] Memory initialized.`)
 }
 
 async function writeMemory() {
@@ -124,12 +131,14 @@ process.on('unhandledRejection', async (reason) => {
 process.on('SIGINT', async () => {
   console.log("\nSIGINT received.");
   await client.writeMemory();
+  console.log("\nMemory saved.");
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log("SIGTERM received.");
+  console.log("\nSIGTERM received.");
   await client.writeMemory();
+  console.log("\nMemory saved.");
   process.exit(0);
 });
 

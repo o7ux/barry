@@ -1,4 +1,6 @@
 import fetch from "node-fetch"
+import { parse } from "node-html-parser";
+
 
 async function log(message, send) {
   console.log(message)
@@ -35,13 +37,43 @@ function insertBeforeLast(array, item) {
   return [...array.slice(0, array.length - 1), item, array[array.length - 1]]
 }
 
-async function fetchBase64fromURL(url) {
+async function fetchBase64fromURL(url, timeoutMs = 5000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
   try {
-    const res = await fetch(url);
+    if (/tenor\.com\/view\//.test(url)) {
+      const res = await fetch(url, { signal: controller.signal });
+      const html = await res.text();
+      clearTimeout(timeoutId);
+
+      const root = parse(html);
+      const meta = root.querySelector('meta[property="og:image"]');
+      if (!meta) {
+        console.error("No og:image meta tag found in Tenor page");
+        return null;
+      }
+
+      const imageUrl = meta.getAttribute("content");
+      if (!imageUrl) return null;
+
+      return await fetchBase64fromURL(imageUrl); // recursive call
+    }
+
+    const res = await fetch(url, { 
+      signal: controller.signal 
+    });
+    
     const buffer = await res.buffer();
+    clearTimeout(timeoutId);
     return buffer.toString('base64');
   } catch (error) {
-    console.error(`Error fetching base64 from URL: ${error}`);
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      console.error(`Fetch timeout after ${timeoutMs}ms for URL: ${url}`);
+    } else {
+      console.error(`Error fetching base64 from URL: ${error}`);
+    }
     return null;
   }
 }
