@@ -114,3 +114,5 @@ lib/
 bin/
 data/db.json
 start.bat
+config/config.json
+data/db.json
