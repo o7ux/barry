@@ -23,6 +23,10 @@ pnpm-lock.yaml
 todo.md
 TODO.md
 README.local.md
+deprecated/
+.tmp/
+config/config.json
+config.json
 
 # Audio Files
 *.ogg
