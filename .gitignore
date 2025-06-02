@@ -112,3 +112,5 @@ public/
 release/
 lib/
 bin/
+data/db.json
+start.bat
