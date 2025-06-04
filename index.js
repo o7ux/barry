@@ -36,9 +36,10 @@ client.commands = {};
 
 client.cleanShutdown = async function () {
   console.log("Shutting down...");
-  await client.writeMemory(); // save memory to db
+  await client.writeMemory();
+  console.log("Memory saved.");
   client.destroy();
-  console.log("Shutdown complete. Goodbye!");
+  console.log("Shutdown complete.");
   process.exit(0);
 };
 
@@ -56,19 +57,30 @@ async function init() {
 
   eventFiles.filter((file) => file.split(".").pop() === "js").forEach(async (file) => {
     const eventName = file.split(".")[0];
-    const event = new (await import(`./events/${file}`)).default(client);
+    try {
+      const event = new (await import(`./events/${file}`)).default(client);
 
-    client.on(eventName, (...args) => event.execute(...args));
+      client.on(eventName, (...args) => event.execute(...args));
 
-    if (eventName == "messageCreate") {
-      client.createClass = event;
-      console.log(`[INIT] MessageCreate event initialized.`)
+      console.log(`[INIT] Event ${eventName} initialized.`)
+
+      if (eventName == "messageCreate") {
+        client.createClass = event;
+        console.log(`[INIT] MessageCreate event initialized.`)
+      }
+    } catch (error) {
+      console.error(`[INIT] Error initializing event ${file}:`, error.stack);
     }
   });
 
   commandFiles.filter((file) => file.split(".").pop() === "js").forEach(async (file) => {
-    const Command = new (await import(`./commands/${file}`)).default(client);
-    client.commands[Command.name] = Command
+    try {
+      const Command = new (await import(`./commands/${file}`)).default(client);
+      console.log(`[INIT] Command ${Command.name} initialized.`)
+      client.commands[Command.name] = Command
+    } catch (error) {
+      console.error(`[INIT] Error initializing command ${file}:`, error.stack);
+    }
   });
 
   client.utils = utils;
@@ -113,32 +125,38 @@ process.on('uncaughtException', async function (err) {
     await client.writeMemory();
   } catch (e) {
     console.error(`Unable to handle exception: ${e.message}`);
-    process.exit(1);
+    client.cleanShutdown()
   }
 });
 
-process.on('unhandledRejection', async (reason) => {
+process.on('unhandledRejection', async ([, reason]) => {
   try {
-    console.error(`Unhandled rejection: ${reason}`);
+    console.error(`Handled rejection: ${reason.stack}`);
     await client.writeMemory();
   } catch (e) {
     console.error(`Unable to handle rejection: ${e.message}`);
-    process.exit(1);
+    client.cleanShutdown()
   }
 });
 
 //save memory on shutdown
 process.on('SIGINT', async () => {
   console.log("\nSIGINT received.");
+  console.log("Shutting down...");
   await client.writeMemory();
-  console.log("\nMemory saved.");
+  console.log("Memory saved.");
+  client.destroy();
+  console.log("Shutdown complete.");
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
   console.log("\nSIGTERM received.");
+  console.log("Shutting down...");
   await client.writeMemory();
-  console.log("\nMemory saved.");
+  console.log("Memory saved.");
+  client.destroy();
+  console.log("Shutdown complete.");
   process.exit(0);
 });
 

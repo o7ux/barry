@@ -18,7 +18,7 @@ export default class {
                 
                 if (existingUser) {
                     existingUser.blacklisted = true
-                    existingUser.infractions = Math.max(existingUser.infractions, 5) // Set infractions to at least 5
+                    existingUser.infractions = Math.max(existingUser.infractions, 5)
                 } else {
                     this.client.blacklistedUsers.push({
                         id: userToAdd,

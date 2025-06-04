@@ -20,6 +20,10 @@ export default class {
                 return msg.reply(`Memory cleared for user ${args[1]}.`)
                 
             case "wipe":
+                if(!args[1] || args[1].toLowerCase() !== "confirm") {
+                    return msg.reply("⚠️ **Warning**: This will delete ALL memory for ALL users.\nTo confirm, use `.b memory wipe confirm`")
+                }
+                
                 await this.client.userMemory.clearAllMemory()
                 await this.client.writeMemory()
                 return msg.reply("All memory wiped.")
@@ -58,7 +62,8 @@ export default class {
                 return msg.reply(
                     "**Memory Command Help:**\n" +
                     "`.b memory clear <userID>` - Clear memory for a specific user\n" +
-                    "`.b memory wipe` - Wipe all memory\n" +
+                    "`.b memory wipe` - Request memory wipe (requires confirmation)\n" +
+                    "`.b memory wipe confirm` - Wipe all memory\n" +
                     "`.b memory stats <userID|all>` - Show memory statistics\n" +
                     "`.b memory help` - Show this help message"
                 )

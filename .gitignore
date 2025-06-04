@@ -49,6 +49,7 @@ log.log
 *.sqlite3
 *.db
 *.db-journal
+data/
 
 # Runtime Data
 pids/

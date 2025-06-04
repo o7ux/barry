@@ -1,4 +1,5 @@
 import chat from "../functions/chat.js"
+import fs from "fs"
 
 export default class {
     constructor(client) {
@@ -140,7 +141,9 @@ export default class {
         else console.log(`[STOP] Queue is now empty`);
 
         await this.client.writeMemory()
-        console.log(`[STOP] Memory written to db`)
+        console.log(`[SAVE] Memory written to db`)
+
+        this.saveMessage(message.content, reply)
     }
 
     async checkUpdate(message) {
@@ -167,4 +170,36 @@ export default class {
 
         return message;
     }
+
+    async saveMessage(user, ai) {
+        try {
+            // Create data directory if it doesn't exist
+            if (!fs.existsSync("./data")) {
+                fs.mkdirSync("./data", { recursive: true });
+            }
+            
+            // Path to messages file
+            const filePath = "./data/messages.txt";
+            
+            // Append to file
+            fs.appendFileSync(filePath, `<|DATE>${new Date().toISOString()}<|DATE> <|USER>${user}<|USER> <|AI>${ai}<|AI>` + "\n");
+            console.log(`[SAVE] Message saved to ${filePath}`);
+        } catch (error) {
+            console.error(`[SAVE] Error saving message to JSON:`, error.message);
+        }
+    }
+
+    // schema:
+    // userMessages: [
+    //     {
+    //         timestamp: string,
+    //         user: string,
+    //         ai: string
+    //     },
+    //     {
+    //         timestamp: string,
+    //         user: string,
+    //         ai: string
+    //     },
+    // ]
 }

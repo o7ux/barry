@@ -5,9 +5,10 @@ export default class {
 
     //return true if command was handled, false if not
     async handleMessage(message) {
-        console.log(`[COMMAND] ${message.author.username} (${message.author.id}) sent message: ${message.content}`)
         if(!this.client.config.superUsers.includes(message.author.id)) return false;
         if(!message.content.startsWith(this.client.config.prefix + " ")) return false;
+
+        console.log(`[COMMAND] ${message.author.username} (${message.author.id}) sent message: ${message.content}`)
             
         const [ , command, ...args ] = message.content.split(" ");
 

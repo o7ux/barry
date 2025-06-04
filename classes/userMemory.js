@@ -5,7 +5,6 @@ export default class Memory {
     }
 
     async writeMemory(userID, key, value){
-        // Validate key parameter to ensure it follows schema
         if (key !== "user" && key !== "assistant") {
             throw new Error(`Invalid key: "${key}". Must be "user" or "assistant"`);
         }
@@ -23,7 +22,6 @@ export default class Memory {
     }
 
     async grabMemoryByType(userID, messageType){
-        // Validate messageType parameter
         if (messageType !== "user" && messageType !== "assistant") {
             throw new Error(`Invalid messageType: "${messageType}". Must be "user" or "assistant"`);
         }
@@ -36,7 +34,6 @@ export default class Memory {
         const userMemory = this.memory[userID] || [];
         
         if (messageType) {
-            // Validate messageType if provided
             if (messageType !== "user" && messageType !== "assistant") {
                 throw new Error(`Invalid messageType: "${messageType}". Must be "user" or "assistant"`);
             }

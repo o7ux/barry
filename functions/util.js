@@ -1,7 +1,6 @@
 import fetch from "node-fetch"
 import { parse } from "node-html-parser";
 
-
 async function log(message, send) {
   console.log(message)
   return;
