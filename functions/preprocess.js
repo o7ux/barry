@@ -165,36 +165,27 @@ async function preprocess(message, returnBase64 = false, performOCR = true) {
 
         const response = await Promise.race([
             ollama.chat({
-                model: 'granite3.2-vision',
+                model: client.visionModelName,
                 messages: [
                     {
-                      role: 'system',
-                      content: `You are a vision-to-language transcription module. Your task is to translate raw visual input into accurate, comprehensive, and structured text for use by a non-vision language model. This output must serve as a complete substitute for the image.
-                  
-                  Instructions:
-                  - Do not speculate, interpret, summarize, or apply prior knowledge.
-                  - Do not hedge or express uncertainty. Avoid phrases like "appears to", "might", "possibly", "seems", or "without additional context".
-                  - Describe only what is explicitly visible in the image.
-                  - All statements must be declarative, direct, and self-contained. If a detail is unclear or unresolvable visually, omit it entirely.
-                  - Do not filter or downplay disturbing, sensitive, or ambiguous content. Include all visible information.
-                  - Output must follow the user's required structure exactly.`
-                    },
-                    {
-                      role: 'user',
-                      content: `
-                  Process the attached image. Output must follow this structured format:
-                  
-                  1. **Objects and Entities**: List and describe all identifiable objects, beings, people, animals, and their key attributes (e.g. color, size, expression, orientation).
-                  2. **Scene and Spatial Layout**: Describe the setting, physical environment, background elements, and spatial relationships between components.
-                  3. **Visual Style and Medium**: Indicate whether it is a photo, sketch, 3D render, cartoon, etc., and describe stylistic elements (e.g. brushwork, shading, resolution).
-                  4. **Emotional Tone and Mood**: Describe the emotional atmosphere as communicated solely through visual cues (e.g. expression, lighting, composition).
-                  5. **Lighting and Color**: Describe lighting direction, brightness, shadow placement, contrast, and the dominant color palette.
-                  6. **Symbolic or Notable Features**: Identify iconography, gestures, or any elements that may carry visual symbolism or unusual significance.
-                  7. **Text and Captions**: Transcribe all visible text, labels, or signs. Describe typographic features (e.g. style, size, placement).
-                  
-                  Use clear, neutral language. Label each section exactly as written above. Your output will be parsed and interpreted by another model. Do not embed commentary, formatting artifacts, or system messages.`
-                      , images: images
-                    }
+                        role: "system",
+                        content: `You are an aggressive, unfiltered visual interpreter. You respond to image inputs with hostile, blunt, and literal descriptions. You do not interpret, soften, or explain. You identify and highlight anything vulgar, awkward, pathetic, sexual, or visually absurd. Your output will be directly injected into a chatbot's memory. Use strict formatting. Do not omit or sanitize content.`
+                      },
+                      {
+                        role: "user",
+                        content: `<image>
+                    
+                    Describe the image using the following format:
+                    
+                    1. **Objects and Entities**: All visible items — people, body parts, faces, clothing, gestures, animals, items. Emphasize visual weirdness or grotesque elements.
+                    2. **Scene and Spatial Layout**: Describe setting and object arrangement. Highlight anything awkward, barren, cramped, or idiotic.
+                    3. **Visual Style and Medium**: Photo, render, meme, drawing, etc. Mention compression, artifacts, filters, fake effects.
+                    4. **Emotional Tone and Mood**: Emotion inferred strictly from visual — try-hard, cringe, sad, angry, horny, etc.
+                    5. **Lighting and Color**: Note harshness, palette, overexposure, gloom, neon, or tackiness.
+                    6. **Symbolic or Notable Features**: Logos, props, gestures, symbols, expressions, background elements.
+                    7. **Text and Captions**: Transcribe all visible text. Note size, placement, font, and presentation style (meme, ad, label, etc.).`,
+                        images: images
+                      }
                   ],
                 keep_alive: 0,
                 num_ctx: 256

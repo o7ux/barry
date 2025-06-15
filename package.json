@@ -4,8 +4,8 @@
   "description": "Barry is a discord bot that is schizophrenic.",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "node index.js --dev"
+    "start": "node --expose-gc --max-old-space-size=2048 --max-semi-space-size=256 index.js",
+    "dev": "node --expose-gc --max-old-space-size=2048 --max-semi-space-size=256 index.js --dev"
   },
   "author": "fritz.",
   "license": "BSD 3-Clause",

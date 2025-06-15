@@ -52,6 +52,8 @@ client.toggleDebug = function (bool) {
 
 async function init() {
 
+  console.log(`[INIT] Running in ${isDev ? "Development" : "Production"} mode`)
+
   const commandFiles = readdirSync(process.cwd() + '/commands/'),
     eventFiles = readdirSync(process.cwd() + "/events/");
 
@@ -60,7 +62,11 @@ async function init() {
     try {
       const event = new (await import(`./events/${file}`)).default(client);
 
-      client.on(eventName, (...args) => event.execute(...args));
+      try {
+        client.on(eventName, (...args) => event.execute(...args));
+      } catch (error) {
+        console.error(`[EVENT] Error running event ${file}:`, error.stack);
+      }
 
       console.log(`[INIT] Event ${eventName} initialized.`)
 
@@ -86,6 +92,9 @@ async function init() {
   client.utils = utils;
   client.config = config;
   client.isDev = isDev;
+  client.modelName = process.env.MODEL_NAME;
+  client.visionModelName = process.env.VISION_MODEL_NAME;
+  client.memoryModelName = process.env.MEMORY_MODEL_NAME;
 
   const commandHandlerInstance = new commandHandler(client);
   client.runCommand = commandHandlerInstance.handleMessage.bind(commandHandlerInstance);
@@ -94,11 +103,10 @@ async function init() {
   client.writeMemory = writeMemory.bind(client);
 
   await client.login(isDev ? process.env.DISCORD_TOKEN_DEV : process.env.DISCORD_TOKEN)
-  console.log(`[LOGIN] Running in ${isDev ? "Development" : "Production"} mode`)
 }
 
 async function initMemory() {
-  const userMemory = new UserMemory(client, db.data.memory);
+  const userMemory = new UserMemory(client, db.data.userMemory);
   const blacklistedUsers = db.data.blacklist;
 
   client.properties = {
@@ -112,7 +120,7 @@ async function initMemory() {
 }
 
 async function writeMemory() {
-  db.data.memory = client.userMemory.memory;
+  db.data.userMemory = client.userMemory.memory;
   db.data.blacklist = client.blacklistedUsers;
   db.data.config.debug = client.properties.debug;
   await db.write();
@@ -121,20 +129,10 @@ async function writeMemory() {
 //catch exception to avoid crashing
 process.on('uncaughtException', async function (err) {
   try {
-    console.error(`Handled exception: ${err.stack}`);
+    console.error(`Handled exception: \n${err.stack}`);
     await client.writeMemory();
   } catch (e) {
-    console.error(`Unable to handle exception: ${e.message}`);
-    client.cleanShutdown()
-  }
-});
-
-process.on('unhandledRejection', async ([, reason]) => {
-  try {
-    console.error(`Handled rejection: ${reason.stack}`);
-    await client.writeMemory();
-  } catch (e) {
-    console.error(`Unable to handle rejection: ${e.message}`);
+    console.error(`Unable to handle exception: \n${err.stack}\n\nReason: ${e.message}`);
     client.cleanShutdown()
   }
 });

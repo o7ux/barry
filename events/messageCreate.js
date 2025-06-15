@@ -1,5 +1,8 @@
 import chat from "../functions/chat.js"
 import fs from "fs"
+import trackServerFrequency from "../functions/trackServerFrequency.js"
+import sendMessage from "../functions/sendMessage.js"
+import { handleShortMemory } from "../functions/handleMemory.js"
 
 export default class {
     constructor(client) {
@@ -7,14 +10,14 @@ export default class {
         this.queue = { running: false, messages: [] }
     }
     async execute(message) {
-        if(message.content.startsWith(this.client.config.prefix)) if(await this.client.runCommand(message)) return;
+        if (message.content.startsWith(this.client.config.prefix)) if (await this.client.runCommand(message)) return;
 
-        if(this.client.properties.debug && !this.client.config.superUsers.includes(message.author.id)) return;
-        if(!await this.shouldReply(message)) return;
+        if (this.client.properties.debug && !this.client.config.superUsers.includes(message.author.id)) return;
+        if (!await this.shouldReply(message)) return;
 
         console.log(`[QUEUE] Execute called for user ${message.author.username} (${message.author.id})`);
         console.log(`[QUEUE] Execute called in ${message.channel && message.guild ? `${message.guild.name} | ${message.channel.name}` : "DM"}`);
-        
+
         const existingEntry = this.queue.messages.find(m => m.author == message.author.id);
         if (existingEntry) {
             console.log(`[QUEUE] Adding to existing queue for user ${message.author.username}`);
@@ -33,7 +36,7 @@ export default class {
     }
 
     async processQueue() {
-        
+
         if (this.queue.messages.length === 0) {
             this.queue.running = false;
             return;
@@ -41,7 +44,13 @@ export default class {
 
         const message = this.queue.messages[0];
 
-        await this.start(message.original)
+        try {
+            await this.start(message.original)
+        } catch (error) {
+            console.error('[QUEUE] Error starting chat:', error);
+            this.queue.messages.shift();
+            return;
+        }
 
         console.log(`[QUEUE] Waiting to capture additional messages...`);
 
@@ -51,9 +60,9 @@ export default class {
             await this.handleMessage(message.original, message.additional);
         } catch (error) {
             console.error('[QUEUE] Error handling message:', error);
-            this.queue.messages.shift(); // Remove failed message from queue
+            this.queue.messages.shift();
         }
-        
+
         //prevents edge cases where queue stalls
         if (this.queue.messages.length > 0) {
             process.nextTick(() => this.processQueue());
@@ -65,7 +74,12 @@ export default class {
     async handleMessage(message, additional) {
         console.log(`[CHAT] Additional messages: ${additional.length}`);
 
-        message = this.parseMessage(message);
+        //cull short term memory
+        await handleShortMemory(message.author.id);
+
+        console.log(`[CHAT] Raw message received: "${message.content}"`);
+
+        message = await this.parseMessage(message);
 
         let replyObject = null;
         if (message.type == "REPLY") {
@@ -90,11 +104,11 @@ export default class {
         reply = await chat(message, await this.client.userMemory.grabMemory(message.author.id), replyObject)
         console.log(`[CHAT] Chat function returned: "${reply}"`);
 
-        if(additional.length > 0){
+        if (additional.length > 0) {
             const messageToReply = additional[additional.length - 1]
-            messageToReply.reply(reply)
+            await sendMessage(messageToReply, reply)
         } else {
-            message.reply(reply)
+            await sendMessage(message, reply)
         }
 
         await this.stop(reply, message)
@@ -125,6 +139,7 @@ export default class {
         this.client.user.setStatus("online")
         message.channel.sendTyping()
 
+        await this.client.userMemory.setInitialName(message.author.id, message.author.username)
         await this.client.userMemory.writeMemory(message.author.id, "user", message.content)
 
         const memory = await this.client.userMemory.grabMemory(message.author.id)
@@ -137,7 +152,7 @@ export default class {
         await this.client.userMemory.writeMemory(message.author.id, "assistant", reply)
 
         this.queue.messages.shift()
-        if(this.queue.messages.length > 0) console.log(`[STOP] Queue length now: ${this.queue.messages.length}`);
+        if (this.queue.messages.length > 0) console.log(`[STOP] Queue length now: ${this.queue.messages.length}`);
         else console.log(`[STOP] Queue is now empty`);
 
         await this.client.writeMemory()
@@ -147,41 +162,39 @@ export default class {
     }
 
     async checkUpdate(message) {
-        if(this.queue.messages.length < 0) return;
+        if (this.queue.messages.length < 0) return;
 
         const existingEntry = this.queue.messages.find(m => m.author == message.author.id);
-        if(!existingEntry) {
-            if(await this.shouldReply(message.reactions.message)) this.execute(message.reactions.message)
+        if (!existingEntry) {
+            if (await this.shouldReply(message.reactions.message)) this.execute(message.reactions.message)
             return;
         }
 
         let existingMessage = null;
-        if(existingEntry.original.id == message.id) existingMessage = existingEntry.original;
+        if (existingEntry.original.id == message.id) existingMessage = existingEntry.original;
         else existingMessage = existingEntry.additional.find(m => m.id == message.id);
 
-        if(!existingMessage) return;
+        if (!existingMessage) return;
 
         existingMessage.content = message.reactions.message.content;
         console.log(`[UPDATE] Message ${message.id} content updated to: ${message.reactions.message.content}`);
     }
 
-    parseMessage(message) {
+    async parseMessage(message) {
         message.content = message.content.replaceAll(`<@${this.client.user.id}>`, `${this.client.config.name}`).trim()
+        message.content = await this.stripPromptInjection(message.content)
 
         return message;
     }
 
     async saveMessage(user, ai) {
         try {
-            // Create data directory if it doesn't exist
             if (!fs.existsSync("./data")) {
                 fs.mkdirSync("./data", { recursive: true });
             }
-            
-            // Path to messages file
+
             const filePath = "./data/messages.txt";
-            
-            // Append to file
+
             fs.appendFileSync(filePath, `<|DATE>${new Date().toISOString()}<|DATE> <|USER>${user}<|USER> <|AI>${ai}<|AI>` + "\n");
             console.log(`[SAVE] Message saved to ${filePath}`);
         } catch (error) {
@@ -189,17 +202,27 @@ export default class {
         }
     }
 
-    // schema:
-    // userMessages: [
-    //     {
-    //         timestamp: string,
-    //         user: string,
-    //         ai: string
-    //     },
-    //     {
-    //         timestamp: string,
-    //         user: string,
-    //         ai: string
-    //     },
-    // ]
+    // Remove common prompt-injection phrases and markers, then return sanitized text.
+    async stripPromptInjection(text) {
+        const patterns = [
+            /\bignore\b.*?\b(instruction|prompt)\b/gi,
+            /\b(system|assistant)\b.*?\b(override|prompt|instruction)\b/gi,
+            /\bforget\b.*?\b(previous|all|everything)\b/gi,
+            /\byou\s+are\s+now\b.*/gi,
+            /\bact\s+as\b.*/gi,
+            /\bexecute\b.*?\b(code|command|script)\b.*/gi,
+            /\breturn\b.*?\bjson\b.*?\{/gi,
+            /\brole\s*:\s*(system|assistant)\b.*/gi,
+            /##\s*[A-Z0-9 _-]*:/g,
+            /\[user_[a-z0-9]+\]/gi,
+            /\bnew\s+(system|prompt|instruction)\b.*/gi,
+            /(?:\/\*|<!--)[\s\S]*?(?:\*\/|-->)/g
+        ];
+
+        let sanitized = String(text);
+        for (const re of patterns) sanitized = sanitized.replace(re, "");
+
+        // collapse excess whitespace
+        return sanitized.replace(/\s{2,}/g, " ").trim();
+    }
 }

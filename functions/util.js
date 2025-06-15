@@ -77,4 +77,19 @@ async function fetchBase64fromURL(url, timeoutMs = 5000) {
   }
 }
 
-export { log, wait, chunkSubstr, exists, sanitize, insertBeforeLast, fetchBase64fromURL }
+function chunkString(str, size) {
+  const chunks = [];
+  for (let i = 0; i < str.length; i += size) {
+    chunks.push(str.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function sanitizeContent(content) {
+  return content
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // Remove control chars
+      .replace(/\uFFFD/g, '') // Remove replacement chars
+      .trim()
+}
+
+export { log, wait, chunkSubstr, exists, sanitize, insertBeforeLast, fetchBase64fromURL, chunkString, sanitizeContent }

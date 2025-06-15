@@ -27,6 +27,7 @@ deprecated/
 .tmp/
 config/config.json
 config.json
+roadmap.md
 
 # Audio Files
 *.ogg
