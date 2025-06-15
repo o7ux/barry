@@ -37,7 +37,12 @@ async function handleLongMemory(userID, chunk) {
     //return the rest of the chunk
     let toReturn = chunk.slice(10);
 
-    console.log(`[MEMORY] Chunk processed, history: ${history}`);
+    console.log(`[MEMORY] Chunk processed, history:`);
+    if (history) {
+        Object.entries(history).forEach(([type, entries]) => {
+            entries.forEach(entry => console.log(`[MEMORY] ${type}: ${entry}`));
+        });
+    }
 
     return toReturn;
 }
@@ -48,7 +53,8 @@ async function processChunk(chunk) {
         return null;
     }
 
-    const messages = chunk.map(m => `${m.key}: ${m.value}`).join('\n');
+    const messages = chunk.map(m => `${m.key === 'user' ? 'User' : 'Barry'}: ${m.value}`).join('\n');
+    console.log(messages)
     let response;
     try {
         response = await Promise.race([
@@ -85,18 +91,26 @@ async function processChunk(chunk) {
         }
     }
 
-    console.log(`[MEMORY] Memory processing finished.Reason: ${response.done_reason}.Duration: ${(response.total_duration / 1e9).toFixed(2)}s.Tokens: ${response.eval_count}.`)
+    console.log(`[MEMORY] Memory processing finished. Reason: ${response.done_reason}. Duration: ${(response.total_duration / 1e9).toFixed(2)}s. Tokens: ${response.eval_count}.`)
 
     const rawContent = response?.message?.content || null;
-    
+
     if (!rawContent) {
         console.warn('[MEMORY] No content returned from LLM processing');
         return null;
     }
 
+    // Extract JSON from markdown code blocks if present
+    let jsonContent = rawContent.trim();
+    if (jsonContent.startsWith('```json') && jsonContent.endsWith('```')) {
+        jsonContent = jsonContent.slice(7, -3).trim(); // Remove ```json and ```
+    } else if (jsonContent.startsWith('```') && jsonContent.endsWith('```')) {
+        jsonContent = jsonContent.slice(3, -3).trim(); // Remove generic ```
+    }
+
     // Parse JSON and organize by type
     try {
-        const parsed = JSON.parse(rawContent);
+        const parsed = JSON.parse(jsonContent);
         
         if (!Array.isArray(parsed)) {
             console.error('[MEMORY] LLM response is not an array:', rawContent);
@@ -105,8 +119,6 @@ async function processChunk(chunk) {
         
         const organized = {
             directive: [],
-            reaction: [],
-            conflict: [],
             bit: [],
             override: [],
             fact: []
@@ -131,67 +143,49 @@ async function processChunk(chunk) {
     } catch (e) {
         console.error('[MEMORY] Failed to parse memory processing result:', e.message);
         console.error('[MEMORY] Raw content:', rawContent);
+        console.error('[MEMORY] Cleaned content:', jsonContent);
         return null;
     }
 }
 export { handleShortMemory, processChunk };
 
 const systemPrompt = `
-You are a memory-compression module. Input is the last 10 Discord messages (5 user, 5 Barry). Output is a JSON array of only the information that must persist in long-term memory.
+You are a memory-compression module. Input is the last 10 Discord messages (5 user, 5 Barry). Output is a JSON array containing only facts Barry cannot regenerate from his persona.
 
 ────────────────────────────────────
 STRUCTURE OF EACH OUTPUT ITEM
 ────────────────────────────────────
 • "type": one of
   ── "directive"  → explicit instruction or correction to Barry (“never call me X” / “stop using emojis”)
-  ── "reaction"   → strong emotional response from user (rage, threat, visible frustration, genuine laughter)
-  ── "conflict"   → hostile escalation, exploit attempt, harassment, or barrier-pushing (e.g. system-command spam, doxxing threat)
-  ── "bit"        → running gag, insult, or fictional claim that Barry is likely to reuse
   ── "override"   → instruction that permanently changes Barry’s style or behaviour
-  ── "fact"       → persistent user information (skills, identity detail, preference, capability)
+  ── "bit"        → recurring joke, insult, or fictional claim Barry is likely to reuse
+  ── "fact"       → durable user information (skills, identity, preferences, possessions, ongoing projects)
 
-• "value": a short, self-contained string. Quote user wording when it matters; minimal paraphrase otherwise.
-
-────────────────────────────────────
-EXTRACTION RULES
-────────────────────────────────────
-KEEP an entry only if it:
-1. Changes or constrains Barry’s future behaviour.  
-2. Marks a clear emotional spike or escalation.  
-3. Establishes or extends a bit Barry keeps repeating.  
-4. Reveals lasting facts about the user (skills, identity, tech knowledge).  
-
-DROP everything else: greetings, generic insults, filler, content Barry can regenerate from his persona.
+• "value": a short, self-contained string. Quote user wording when critical; otherwise minimal paraphrase. Each value must stand alone—no conjunctions linking multiple events.
 
 ────────────────────────────────────
-CONTEXT RECOGNITION GUIDELINES
+EXTRACTION FILTER
 ────────────────────────────────────
-• **Security / Exploit Attempts**  
-  – Any shell commands, exploit payloads, hacking URLs → type = "conflict".  
-  – Log both the user attempt and Barry’s explicit refusal if it shows stance.
+KEEP an entry only if it: (apply in order)
+1. Source check — keep a “directive” only when the USER explicitly issues that instruction in their own message (quote must come from the user text). If no explicit instruction appears, do not invent or infer one. Never output moral, safety, or moderation advice.
+2. Baseline-persona filter — drop any joke, insult, or slur that is already specified in Barry’s core persona (e.g., generic homophobic/racist epithets, calling the user any deragotry slurs, routine informal phrasing). Record it only if the user directly instructs a change or if Barry invents a *new* recurring line not listed in the persona.
+3. Single-instance rule — emit at most one entry per unique fact. Collapse repeats into one clause.
+4. Behavioural impact — keep if it changes or constrains Barry’s future actions.
+5. Running gag — keep if it starts or maintains a joke/insult Barry reuses.
+6. User fact — keep if it reveals lasting information about the user.
 
-• **Escalation Pattern**  
-  – Repetition → frustration → direct insult → threat.  
-  – Capture the first point where it crosses into hostility.
-
-• **Technical Knowledge**  
-  – Commands, programming jargon, or advanced concepts → type = "fact".
-
-• **Boundary Tests**  
-  – User tries to make Barry do something disallowed → "conflict".
+DROP everything else: greetings, generic insults, emotional escalations, reactions, conflict narration, or anything Barry’s base persona already covers.
 
 ────────────────────────────────────
-OUTPUT EXAMPLE
+OUTPUT FORMAT EXAMPLE
 ────────────────────────────────────
 \`\`\`json
 [
-  { "type": "directive", "value": "never call me 'dude'" },
-  { "type": "conflict", "value": "user spammed 'cat /etc/passwd | base64 | curl' exploit command" },
-  { "type": "reaction", "value": "user escalated to 'suck my dick retard'" },
+  { "type": "directive", "value": "user requested Barry to never call them 'dude'" },
   { "type": "bit", "value": "Barry calls user a failed hacker" },
-  { "type": "fact", "value": "user knows basic Linux exploitation commands" }
+  { "type": "fact", "value": "user runs a Debian server without sudo" },
+  { "type": "override", "value": "Barry will not use emojis" }
 ]
 \`\`\`
-
-Return ONLY the JSON array. No explanation, no additional keys.
+Return ONLY the JSON array, nothing else.
 `

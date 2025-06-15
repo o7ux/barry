@@ -24,14 +24,8 @@ userMemory = {
       directives: [
         "do not call me dude"
       ],
-      reactions: [
-        "the user responded when they were called a dude"
-      ],
       bits: [
         "the user makes minimum wage"
-      ],
-      conflicts: [
-        "the user called barry a failure after barry called them a dude"
       ],
       overrides: [
         "barry should not call the user a dude"

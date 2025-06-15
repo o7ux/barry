@@ -41,21 +41,25 @@ export default class Memory {
     }
 
     async writeLongTermMemory(userID, organizedMemory) {
+        
         if (!organizedMemory || typeof organizedMemory !== 'object') {
-            return;
+            return console.warn(`[MEMORY] Invalid organizedMemory:`, organizedMemory);
         }
 
+        if(Object.keys(organizedMemory).length === 0) return console.warn(`[MEMORY] No organizedMemory provided for user ${userID}`, organizedMemory);
+
         await this.validateMemory(userID);
+
+        console.log(`[MEMORY] Organized memory:`, organizedMemory);
+
 
         // Add entries to appropriate long-term memory categories
         Object.entries(organizedMemory).forEach(([type, entries]) => {
             // Map 'directive' to 'directives' (plural form for schema consistency)
             const categoryName = type === 'directive' ? 'directives' : 
-                                type === 'reaction' ? 'reactions' : 
-                                type === 'conflict' ? 'conflicts' : 
-                                type === 'bit' ? 'bits' : 
-                                type === 'override' ? 'overrides' : 
-                                type === 'fact' ? 'facts' : null;
+                                 type === 'bit' ? 'bits' : 
+                                 type === 'override' ? 'overrides' : 
+                                 type === 'fact' ? 'facts' : null;
 
             if (categoryName && this.memory[userID].long_term_memory[categoryName]) {
                 entries.forEach(entry => {
@@ -123,20 +127,24 @@ export default class Memory {
     }
 
     async clearAllMemory(){
-        this.memory = {};
+        await Promise.all(Object.keys(this.memory).map(async userID => {
+            this.memory[userID].messages = [];
+        }));
     }
 
     async getMemoryStats(userID){
         const userMemory = this.memory[userID]?.messages || [];
         const userMessages = userMemory.filter(entry => entry.key === "user").length;
         const assistantMessages = userMemory.filter(entry => entry.key === "assistant").length;
+        const longTermMemory = this.memory[userID]?.long_term_memory || {};
         
         return {
             totalMessages: userMemory.length,
             userMessages,
             assistantMessages,
             firstMessage: this.memory[userID]?.conversation_summary?.first_message || null,
-            lastMessage: this.memory[userID]?.conversation_summary?.last_message || null
+            lastMessage: this.memory[userID]?.conversation_summary?.last_message || null,
+            longTermMemory: longTermMemory
         };
     }   
 
@@ -172,11 +180,9 @@ export default class Memory {
             step: 0
         };
         
-        if(!this.memory[userID].long_term_memory) this.memory[userID].long_term_memory = {
+        if(Array.isArray(this.memory[userID].long_term_memory) || !this.memory[userID].long_term_memory) this.memory[userID].long_term_memory = {
             directives: [],
-            reactions: [],
             bits: [],
-            conflicts: [],
             overrides: [],
             facts: []
         };

@@ -46,16 +46,15 @@ export default class {
                 if(!this.client.userMemory.memory[args[1]]) return msg.reply("User not found in memory.")
                 
                 const stats = await this.client.userMemory.getMemoryStats(args[1])
-                const firstTimestamp = stats.firstMessage ? new Date(stats.firstMessage.timestamp).toLocaleString() : "N/A"
-                const lastTimestamp = stats.lastMessage ? new Date(stats.lastMessage.timestamp).toLocaleString() : "N/A"
                 
                 return msg.reply(
                     `**Memory Stats for ${args[1]}:**\n\`\`\`` +
                     `Total Messages: ${stats.totalMessages}\n` +
                     `User Messages: ${stats.userMessages}\n` +
                     `Assistant Messages: ${stats.assistantMessages}\n` +
-                    `First Message: ${firstTimestamp}\n` +
-                    `Last Message: ${lastTimestamp}\`\`\``
+                    `First Message: ${stats.firstMessage}\n` +
+                    `Last Message: ${stats.lastMessage}\n` +
+                    `Long Term Memory: ${JSON.stringify(stats.longTermMemory, null, 2)}\`\`\``
                 )
                 
             case "help":

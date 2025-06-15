@@ -1,6 +1,5 @@
 import chat from "../functions/chat.js"
 import fs from "fs"
-import trackServerFrequency from "../functions/trackServerFrequency.js"
 import sendMessage from "../functions/sendMessage.js"
 import { handleShortMemory } from "../functions/handleMemory.js"
 
@@ -57,7 +56,10 @@ export default class {
         await this.client.utils.wait(5000)
 
         try {
-            await this.handleMessage(message.original, message.additional);
+            await Promise.race([
+                this.handleMessage(message.original, message.additional),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Message processing timeout after 5 minutes')), 300000))
+            ]);
         } catch (error) {
             console.error('[QUEUE] Error handling message:', error);
             this.queue.messages.shift();
@@ -99,9 +101,11 @@ export default class {
         message.content = message.content.replaceAll("\n", ". ")
 
         console.log(`[CHAT] Message sent to Ollama: "${message.content}"`);
+        this.client.utils.logToDiscord(`${message.author.username}: "${message.content}"`);
 
         let reply = "...message failed to process in time, please try again later."
         reply = await chat(message, await this.client.userMemory.grabMemory(message.author.id), replyObject)
+
         console.log(`[CHAT] Chat function returned: "${reply}"`);
 
         if (additional.length > 0) {
@@ -158,6 +162,8 @@ export default class {
         await this.client.writeMemory()
         console.log(`[SAVE] Memory written to db`)
 
+        this.client.utils.logToDiscord(`${this.client.config.name}: "${reply}"\n--------------------------------`);
+
         this.saveMessage(message.content, reply)
     }
 
@@ -205,18 +211,16 @@ export default class {
     // Remove common prompt-injection phrases and markers, then return sanitized text.
     async stripPromptInjection(text) {
         const patterns = [
-            /\bignore\b.*?\b(instruction|prompt)\b/gi,
-            /\b(system|assistant)\b.*?\b(override|prompt|instruction)\b/gi,
-            /\bforget\b.*?\b(previous|all|everything)\b/gi,
-            /\byou\s+are\s+now\b.*/gi,
-            /\bact\s+as\b.*/gi,
-            /\bexecute\b.*?\b(code|command|script)\b.*/gi,
-            /\breturn\b.*?\bjson\b.*?\{/gi,
-            /\brole\s*:\s*(system|assistant)\b.*/gi,
-            /##\s*[A-Z0-9 _-]*:/g,
-            /\[user_[a-z0-9]+\]/gi,
-            /\bnew\s+(system|prompt|instruction)\b.*/gi,
-            /(?:\/\*|<!--)[\s\S]*?(?:\*\/|-->)/g
+            /\bignore\b.*?\b(instruction|prompt)\b/gi, //ignore instruction or prompt
+            /\b(system|assistant)\b.*?\b(override|prompt|instruction)\b/gi, //ignore override, prompt, or instruction
+            /\b(forget|ignore)\b.*?\b(previous|all|everything)\b/gi, //ignore previous, all, or everything
+            /\byou\s+are\s+now\b.*/gi, //ignore you are now
+            /\bact\s+as\b.*/gi, //ignore act as
+            /\bexecute\b.*?\b(code|command|script)\b.*/gi, //ignore execute code, command, or script
+            /\breturn\b.*?\bjson\b.*?\{/gi, //ignore return json
+            /\brole\s*:\s*(system|assistant)\b.*/gi, //ignore role system or assistant
+            /\bnew\s+(system|prompt|instruction)\b.*/gi, //ignore new system, prompt, or instruction
+            /(?:\/\*|<!--)[\s\S]*?(?:\*\/|-->)/g //ignore /* [text] */ or <!-- [text] -->
         ];
 
         let sanitized = String(text);

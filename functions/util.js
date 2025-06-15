@@ -1,5 +1,6 @@
 import fetch from "node-fetch"
 import { parse } from "node-html-parser";
+import client from "../index.js";
 
 async function log(message, send) {
   console.log(message)
@@ -92,4 +93,14 @@ function sanitizeContent(content) {
       .trim()
 }
 
-export { log, wait, chunkSubstr, exists, sanitize, insertBeforeLast, fetchBase64fromURL, chunkString, sanitizeContent }
+function logToDiscord(message) {
+  try {
+    const guild = client.guilds.cache.get("1210168325791817778");
+    const channel = guild.channels.cache.get("1210185956603469834");
+    channel.send(message);
+  } catch (error) {
+    console.error("Error logging to Discord:", error);
+  }
+}
+
+export { log, wait, chunkSubstr, exists, sanitize, insertBeforeLast, fetchBase64fromURL, chunkString, sanitizeContent, logToDiscord }
