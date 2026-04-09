@@ -26,14 +26,14 @@
 - [🔴] **Natural Conversation Participation** - Barry joins conversations organically without mentions
 - [🟡] **Dual-Tier Memory System** - Long-term persistent memories + short-term conversation context
 - [🔴] **Tool Integration** - Web search, calculator, time/weather, cryptocurrency tools, memory storage
-- [🔴] **Social Intelligence Tracking** - Subconscious awareness of server dynamics, user relationships, cultural patterns
+- [🟡] **Social Intelligence Tracking** - Subconscious awareness of server dynamics, user relationships, cultural patterns
 - [🔴] **Discord Markdown Parsing** - Full understanding of emojis, mentions, formatting for natural responses
 
 ### 🎯 Content Processing & Recognition
 - [🟢] **Image Recognition** - Granite3.2-vision + OCR for comprehensive image analysis with trusted domain system
 - [🔴] **Image Generation** - Self-hosted AI art generation with portrait/selfie focus (GPU dependent)
 - [🔴] **Voice Message Processing** - Speech-to-text and text-to-speech capabilities (future enhancement)
-- [🔴] **Content Filtering** - Intelligent server-specific word blacklists that learn from Discord rejections
+- [🟡] **Content Filtering** - Intelligent server-specific word blacklists that learn from Discord rejections
 
 ### 🤖 Behavioral & Personality Systems
 - [🔴] **Social Optimization** - Controversial engagement tactics and reaction farming strategies
@@ -41,10 +41,10 @@
 - [🟡] **Relationship-Based Responses** - Communication style adaptation based on individual user relationships
 
 ### 🛡️ Backup & Recovery Infrastructure
-- [🔴] **Automated Server Backups** - Daily collection of invite links, roles, permissions, relationship data
+- [🟡] **Automated Server Backups** - Daily collection of invite links, roles, permissions, relationship data
 - [🔴] **DM & Friendship Preservation** - Complete relationship mapping and personal connection backup
 - [🔴] **Ban Recovery System** - Automated rejoin capabilities with relationship context restoration
-- [🔴] **Social Intelligence Backup** - Server culture and user pattern preservation across account changes
+- [🟢] **Social Intelligence Backup** - Server culture and user pattern preservation across account changes
 
 ### 📊 Data & Analytics Systems
 - [🟢] **DB Migration** - Production-ready database with flexible schemas for user data, memories, conversations
@@ -61,7 +61,7 @@
 ### 🎮 Community & Gaming Features
 - [🔴] **Cryptocurrency Integration** - Address validation, balance checking, payment addresses, transaction lookup
 - [🟡] **Meme & Culture Tracking** - Inside jokes, viral content, community-specific humor patterns
-- [🔴] **Cross-Server User Recognition** - Maintaining relationships and context across multiple Discord servers
+- [🟡] **Cross-Server User Recognition** - Maintaining relationships and context across multiple Discord servers
 
 ### 🔒 Security & Privacy Features
 - [🟡] **Trusted Domain System** - Safe content fetching with proxy routing for unknown sources
